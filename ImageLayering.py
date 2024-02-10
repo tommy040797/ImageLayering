@@ -33,7 +33,7 @@ for file in glob.glob(foregroundFolder):
             img.background_color = "transparent"
             img.virtual_pixel = 'background'
             img.distort('plane_2_cylinder', (fov, originalw /2, originalh/2))
-            img.save(filename ='gogdistort1.png')
+            #img.save(filename ='gogdistort1.png')
             img_buffer=numpy.asarray(bytearray(img.make_blob()), dtype=numpy.uint8)
         bytesio = io.BytesIO(img_buffer)
         img = Image.open(bytesio)
@@ -46,6 +46,11 @@ for bg in backgroundlist:
         name = counter
         counter += 1
         erg = bg.copy()
-        erg.paste(fg, (locationx, locationy), fg.split()[3])
-        erg.save(outputFolder+ "/" + str(name) + ".jpg")
+        try:
+            erg.paste(fg, (locationx, locationy), fg.split()[3])
+            erg.save(outputFolder+ "/" + str(name) + ".jpg")
+        except:
+            erg.paste(fg, (locationx, locationy), fg)
+            erg.save(outputFolder+ "/" + str(name) + ".png")
+        
 
