@@ -16,6 +16,7 @@ targetwidth = int(config["Default"]["BreiteDesGelayertenBilds"])
 locationx = int(config["Default"]["XWertDesGelayertenBilds"])
 locationy = int(config["Default"]["YWertDesGelayertenBilds"])
 distortion = Util.str2bool(config["Default"]["VerzerrungEingeschaltet"])
+transparenz = Util.str2bool(config["Default"]["TransparenzEingeschaltet"])
 fov = int(config["Default"]["VerzerrungsFaktor"])
 grenzwertR = int(config["Default"]["grenzwertR"])
 grenzwertG = int(config["Default"]["grenzwertG"]) 
@@ -42,7 +43,8 @@ for file in glob.glob(foregroundFolder):
         print("problem beim zuschneiden des bilds mit dem namen: " + name + ", evtl kein schwarz im bild vorhanden?")
         print(+ str(error))
     try:
-        img = Util.tranparent(img, grenzwertR, grenzwertG, grenzwertB)
+        if transparenz:
+            img = Util.tranparent(img, grenzwertR, grenzwertG, grenzwertB)
     except Exception as error:
         logging.error("problem beim transparentisieren des bilds mit dem namen: " + name + str(error))
         print("problem beim transparentisieren des bilds mit dem namen: " + name)
@@ -55,11 +57,11 @@ for file in glob.glob(foregroundFolder):
         logging.error("problem beim resizen des bilds mit dem namen: " + name + str(error))
         print("problem beim resizen des bilds mit dem namen: " + name)
         print(+ str(error))
-    img.save("Background/esGehtNichtNochUneleganter.png")
+    img.save("Util/esGehtNichtNochUneleganter.png")
     
     if distortion:
         try:
-            with imgur(filename="Background/esGehtNichtNochUneleganter.png") as img:
+            with imgur(filename="Util/esGehtNichtNochUneleganter.png") as img:
                 img.background_color = "transparent"
                 img.virtual_pixel = 'background'
                 
