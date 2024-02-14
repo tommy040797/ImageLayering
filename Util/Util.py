@@ -18,13 +18,26 @@ def crop(img):
     return im_pil
 
 
-def tranparent(img, grenzwertR, grenzwertG, grenzwertB):
+def tranparent(img, grenzwertR, grenzwertG, grenzwertB, alpha):
     datas = img.getdata()
 
     newData = []
     for item in datas:
         if item[0] > grenzwertR and item[1] > grenzwertG and item[2] > grenzwertB:
-            newData.append((255, 255, 255, 0))
+            newData.append((255, 255, 255, alpha))
+        else:
+            newData.append(item)
+
+    img.putdata(newData)
+    return img
+
+def farbe(img, targetR, targetG, targetB, targetAlpha):
+    datas = img.getdata()
+
+    newData = []
+    for item in datas:
+        if item[0] < 255 and item[1] < 255 and item[2] < 255 != 0:
+            newData.append((targetR, targetB, targetG, targetAlpha))
         else:
             newData.append(item)
 
