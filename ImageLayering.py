@@ -6,8 +6,11 @@ import numpy as np
 import Util.Util as Util
 import logging
 import configparser
- 
-from wand.image import Image as imgur # https://imagemagick.org/script/download.php#windows
+import cv2 as cv
+
+from wand.image import (
+    Image as imgur,
+)  # https://imagemagick.org/script/download.php#windows
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -26,75 +29,190 @@ farbeg = int(config["Default"]["VordergrundG"])
 farbealpha = int(config["Default"]["AlphawertVordergrund"])
 fov = int(config["Default"]["VerzerrungsFaktor"])
 grenzwertR = int(config["Default"]["grenzwertR"])
-grenzwertG = int(config["Default"]["grenzwertG"]) 
+grenzwertG = int(config["Default"]["grenzwertG"])
 grenzwertB = int(config["Default"]["grenzwertB"])
 backgroundalpha = int(config["Default"]["ForegroundAlpha"])
+customTexture = Util.str2bool(config["Default"]["CustomVordergrundTextur"])
 
 logging.basicConfig(filename="Errorlog.log", level=logging.INFO)
 
-dirname = os.path.dirname(os.path.realpath(__file__)).replace(os.sep, '/')
-backgroundFolder =  dirname + "/Background/*"
-foregroundFolder = dirname + '/Foreground/*'
+dirname = os.path.dirname(os.path.realpath(__file__)).replace(os.sep, "/")
+backgroundFolder = dirname + "/Background/*"
+foregroundFolder = dirname + "/Foreground/*"
+textureFolder = dirname + "/Textures/*"
 outputFolder = dirname + "/Results"
 
 backgroundlist = [Image.open(file) for file in glob.glob(backgroundFolder)]
 foregroundlist = []
+preforegroundlist = []
+texturelist = [Image.open(file) for file in glob.glob(textureFolder)]
 
-for file in glob.glob(foregroundFolder):
-    img = Image.open(file)
-    name = img.filename
-    img = img.convert("RGBA")
-    
-    if trimmen:
-        try:
-            img = Util.crop(img)
-        except Exception as error:
-            logging.error("problem beim zuschneiden des bilds mit dem namen: " + name + ", evtl kein schwarz im bild vorhanden?" + str(error))
-            print("problem beim zuschneiden des bilds mit dem namen: " + name + ", evtl kein schwarz im bild vorhanden?")
-            print(+ str(error))
-    if farbe:        
-        try:
-            img = Util.farbe(img, farber, farbeb, farbeg, farbealpha)
-        except Exception as error:
-            logging.error("problem beim Farbe verändern des Vordergrunds des bilds mit dem namen: " + name + str(error))
-            print("problem beim Farbe verändern des Vordergrunds  des bilds mit dem namen: " + name)
-            print(+ str(error))
-    
-    if transparenz:
-        try:
-                img = Util.tranparent(img, grenzwertR, grenzwertG, grenzwertB, backgroundalpha)
-        except Exception as error:
-            logging.error("problem beim transparentisieren des bilds mit dem namen: " + name + str(error))
-            print("problem beim transparentisieren des bilds mit dem namen: " + name)
-            print(+ str(error))
 
-    
-    originalw, originalh = img.size
-    factor = originalw / targetwidth
-    
-    if skalieren:
-        try:
-            img = img.resize((targetwidth, int(originalh / factor)), resample=Image.BOX) #diese zeile droppt den filename ??
-        except Exception as error:
-            logging.error("problem beim resizen des bilds mit dem namen: " + name + str(error))
-            print("problem beim resizen des bilds mit dem namen: " + name)
-            print(+ str(error))
-        img.save("Util/esGehtNichtNochUneleganter.png")
-    
-    if distortion:
-        try:
-            with imgur(filename="Util/esGehtNichtNochUneleganter.png") as img:
-                img.background_color = "transparent"
-                img.virtual_pixel = 'background'
-                img.distort('plane_2_cylinder', (fov, originalw /2, originalh/2))
-                img_buffer=np.asarray(bytearray(img.make_blob()), dtype=np.uint8)
-            bytesio = io.BytesIO(img_buffer)
-            img = Image.open(bytesio)
-        except Exception as error:
-            logging.error("problem beim zerren des bilds mit dem namen: " + str(error))
-            print("problem beim zerren des bilds mit dem namen: " + name)
-            print(+ str(error))
-    foregroundlist.append(img)
+if customTexture:
+    for file in glob.glob(foregroundFolder):
+        img = Image.open(file)
+        name = img.filename
+        img = img.convert("RGBA")
+        originalw, originalh = img.size
+        factor = originalw / targetwidth
+
+        if trimmen:
+            try:
+                img = Util.crop(img)
+            except Exception as error:
+                logging.error(
+                    "problem beim zuschneiden des bilds mit dem namen: "
+                    + name
+                    + ", evtl kein schwarz im bild vorhanden?"
+                    + str(error)
+                )
+                print(
+                    "problem beim zuschneiden des bilds mit dem namen: "
+                    + name
+                    + ", evtl kein schwarz im bild vorhanden?"
+                )
+                print(+str(error))
+        if skalieren:
+            try:
+                img = img.resize(
+                    (targetwidth, int(originalh / factor)), resample=Image.BOX
+                )  # diese zeile droppt den filename ??
+            except Exception as error:
+                logging.error(
+                    "problem beim resizen des bilds mit dem namen: " + name + str(error)
+                )
+                print("problem beim resizen des bilds mit dem namen: " + name)
+                print(+str(error))
+        img = Util.replaceTexturePrep(img)
+        img = Util.imageTransparentPattern(img)
+        for file in glob.glob(textureFolder):
+            textur = Image.open(file)
+            textur = textur.convert("RGBA")
+            textur.paste(img, (locationx, locationy), img)
+
+            w, h = img.size
+            box = (locationx, locationy, locationx + w, locationy + h)
+            textur = textur.crop(box)
+            textur = np.array(textur)
+            textur = cv.dilate(textur, (5, 5), iterations=1)
+            textur = Image.fromarray(textur)
+            preforegroundlist.append(textur)
+
+    for img in preforegroundlist:
+        if transparenz:
+            try:
+                img = Util.whiteTranparent(img)
+            except Exception as error:
+                logging.error(
+                    "problem beim transparentisieren des bilds mit dem namen: "
+                    + str(error)
+                )
+                print("problem beim transparentisieren des bilds mit dem namen: ")
+                print(+str(error))
+        if distortion:
+            img.save("Util/esGehtNichtNochUneleganter.png")
+            try:
+                with imgur(filename="Util/esGehtNichtNochUneleganter.png") as img:
+                    img.background_color = "transparent"
+                    img.virtual_pixel = "background"
+                    img.distort("plane_2_cylinder", (fov, originalw / 2, originalh / 2))
+                    img_buffer = np.asarray(bytearray(img.make_blob()), dtype=np.uint8)
+                bytesio = io.BytesIO(img_buffer)
+                img = Image.open(bytesio)
+            except Exception as error:
+                logging.error(
+                    "problem beim zerren des bilds mit dem namen: " + str(error)
+                )
+                print("problem beim zerren des bilds mit dem namen: ")
+                print(+str(error))
+        foregroundlist.append(img)
+
+
+if not customTexture:
+    for file in glob.glob(foregroundFolder):
+        img = Image.open(file)
+        name = img.filename
+        img = img.convert("RGBA")
+
+        if trimmen:
+            try:
+                img = Util.crop(img)
+            except Exception as error:
+                logging.error(
+                    "problem beim zuschneiden des bilds mit dem namen: "
+                    + name
+                    + ", evtl kein schwarz im bild vorhanden?"
+                    + str(error)
+                )
+                print(
+                    "problem beim zuschneiden des bilds mit dem namen: "
+                    + name
+                    + ", evtl kein schwarz im bild vorhanden?"
+                )
+                print(+str(error))
+        if farbe:
+            try:
+                img = Util.farbe(img, farber, farbeb, farbeg, farbealpha)
+            except Exception as error:
+                logging.error(
+                    "problem beim Farbe verändern des Vordergrunds des bilds mit dem namen: "
+                    + name
+                    + str(error)
+                )
+                print(
+                    "problem beim Farbe verändern des Vordergrunds  des bilds mit dem namen: "
+                    + name
+                )
+                print(+str(error))
+
+        if transparenz:
+            try:
+                img = Util.tranparent(
+                    img, grenzwertR, grenzwertG, grenzwertB, backgroundalpha
+                )
+            except Exception as error:
+                logging.error(
+                    "problem beim transparentisieren des bilds mit dem namen: "
+                    + name
+                    + str(error)
+                )
+                print(
+                    "problem beim transparentisieren des bilds mit dem namen: " + name
+                )
+                print(+str(error))
+
+        originalw, originalh = img.size
+        factor = originalw / targetwidth
+
+        if skalieren:
+            try:
+                img = img.resize(
+                    (targetwidth, int(originalh / factor)), resample=Image.BOX
+                )  # diese zeile droppt den filename ??
+            except Exception as error:
+                logging.error(
+                    "problem beim resizen des bilds mit dem namen: " + name + str(error)
+                )
+                print("problem beim resizen des bilds mit dem namen: " + name)
+                print(+str(error))
+            img.save("Util/esGehtNichtNochUneleganter.png")
+
+        if distortion:
+            try:
+                with imgur(filename="Util/esGehtNichtNochUneleganter.png") as img:
+                    img.background_color = "transparent"
+                    img.virtual_pixel = "background"
+                    img.distort("plane_2_cylinder", (fov, originalw / 2, originalh / 2))
+                    img_buffer = np.asarray(bytearray(img.make_blob()), dtype=np.uint8)
+                bytesio = io.BytesIO(img_buffer)
+                img = Image.open(bytesio)
+            except Exception as error:
+                logging.error(
+                    "problem beim zerren des bilds mit dem namen: " + str(error)
+                )
+                print("problem beim zerren des bilds mit dem namen: " + name)
+                print(+str(error))
+        foregroundlist.append(img)
 
 
 counter = 1
@@ -106,13 +224,11 @@ for bg in backgroundlist:
         try:
             try:
                 erg.paste(fg, (locationx, locationy), fg)
-                erg.save(outputFolder+ "/" + str(name) + ".jpg")
+                erg.save(outputFolder + "/" + str(name) + ".jpg")
             except Exception as error:
                 erg.paste(fg, (locationx, locationy), fg)
-                erg.save(outputFolder+ "/" + str(name) + ".png")
+                erg.save(outputFolder + "/" + str(name) + ".png")
         except Exception as error:
             logging.error("problem beim Layern des bilds mit dem namen: " + name)
             print("problem beim layern des bilds mit dem namen: " + name)
-            print(+ str(error))
-        
-
+            print(+str(error))
