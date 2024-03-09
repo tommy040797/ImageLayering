@@ -15,7 +15,12 @@ from wand.image import (
 config = configparser.ConfigParser()
 config.read("config.ini")
 
+finalheight = int(config["Default"]["FinaleHoeheDesBilds"])
 targetwidth = int(config["Default"]["BreiteDesGelayertenBilds"])
+targetwidthsecond = int(config["Default"]["BreiteDesZweitenBilds"])
+zweitebild = Util.str2bool(config["Default"]["ZweitesBild"])
+locationzweitex = int(config["Default"]["XWertDesZweitenBilds"])
+locationzweitey = int(config["Default"]["YWertDesZweitenBilds"])
 locationx = int(config["Default"]["XWertDesGelayertenBilds"])
 locationy = int(config["Default"]["YWertDesGelayertenBilds"])
 trimmen = Util.str2bool(config["Default"]["SkalierenEingeschaltet"])
@@ -109,22 +114,6 @@ if customTexture:
                 )
                 print("problem beim transparentisieren des bilds mit dem namen: ")
                 print(+str(error))
-        if distortion:
-            img.save("Util/esGehtNichtNochUneleganter.png")
-            try:
-                with imgur(filename="Util/esGehtNichtNochUneleganter.png") as img:
-                    img.background_color = "transparent"
-                    img.virtual_pixel = "background"
-                    img.distort("plane_2_cylinder", (fov, originalw / 2, originalh / 2))
-                    img_buffer = np.asarray(bytearray(img.make_blob()), dtype=np.uint8)
-                bytesio = io.BytesIO(img_buffer)
-                img = Image.open(bytesio)
-            except Exception as error:
-                logging.error(
-                    "problem beim zerren des bilds mit dem namen: " + str(error)
-                )
-                print("problem beim zerren des bilds mit dem namen: ")
-                print(+str(error))
         foregroundlist.append(img)
 
 
@@ -197,7 +186,14 @@ if not customTexture:
                 print(+str(error))
             img.save("Util/esGehtNichtNochUneleganter.png")
 
+        foregroundlist.append(img)
+
+
+counter = 1
+for bg in backgroundlist:
+    for fg in foregroundlist:
         if distortion:
+            fg.save("Util/esGehtNichtNochUneleganter.png")
             try:
                 with imgur(filename="Util/esGehtNichtNochUneleganter.png") as img:
                     img.background_color = "transparent"
@@ -210,23 +206,45 @@ if not customTexture:
                 logging.error(
                     "problem beim zerren des bilds mit dem namen: " + str(error)
                 )
-                print("problem beim zerren des bilds mit dem namen: " + name)
+                print("problem beim zerren des bilds mit dem namen: ")
                 print(+str(error))
-        foregroundlist.append(img)
-
-
-counter = 1
-for bg in backgroundlist:
-    for fg in foregroundlist:
+        else:
+            img = fg
         name = counter
         counter += 1
         erg = bg.copy()
         try:
             try:
-                erg.paste(fg, (locationx, locationy), fg)
+                erg.paste(img, (locationx, locationy), img)
+                if zweitebild:
+                    originalw, originalh = fg.size
+                    factor = originalw / targetwidthsecond
+                    fg = fg.resize(
+                        (targetwidthsecond, int(originalh / factor)), resample=Image.BOX
+                    )
+                    erg.paste(fg, (locationzweitex, locationzweitey), fg)
+                originalw, originalh = erg.size
+                factor = originalh / finalheight
+                erg = erg.resize(
+                    (int(originalw / factor), finalheight),
+                    resample=Image.BOX,
+                )
                 erg.save(outputFolder + "/" + str(name) + ".jpg")
             except Exception as error:
-                erg.paste(fg, (locationx, locationy), fg)
+                erg.paste(img, (locationx, locationy), img)
+                if zweitebild:
+                    originalw, originalh = fg.size
+                    factor = originalw / targetwidthsecond
+                    fg = fg.resize(
+                        (targetwidth, int(originalh / factor)), resample=Image.BOX
+                    )
+                    erg.paste(fg, (locationzweitex, locationzweitey), fg)
+                originalw, originalh = erg.size
+                factor = originalh / finalheight
+                erg = erg.resize(
+                    (int(originalw / factor), finalheight),
+                    resample=Image.BOX,
+                )
                 erg.save(outputFolder + "/" + str(name) + ".png")
         except Exception as error:
             logging.error("problem beim Layern des bilds mit dem namen: " + name)
