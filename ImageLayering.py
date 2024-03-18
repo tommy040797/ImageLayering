@@ -214,39 +214,21 @@ for bg in backgroundlist:
         counter += 1
         erg = bg.copy()
         try:
-            try:
-                erg.paste(img, (locationx, locationy), img)
-                if zweitebild:
-                    originalw, originalh = fg.size
-                    factor = originalw / targetwidthsecond
-                    fg = fg.resize(
-                        (targetwidthsecond, int(originalh / factor)), resample=Image.BOX
-                    )
-                    erg.paste(fg, (locationzweitex, locationzweitey), fg)
-                originalw, originalh = erg.size
-                factor = originalh / finalheight
-                erg = erg.resize(
-                    (int(originalw / factor), finalheight),
-                    resample=Image.BOX,
+            erg.paste(img, (locationx, locationy), img)
+
+            if zweitebild:
+                originalw, originalh = fg.size
+                factor = originalw / targetwidthsecond
+                fg = fg.resize(
+                    (targetwidthsecond, int(originalh / factor)), resample=Image.BOX
                 )
-                erg.save(outputFolder + "/" + str(name) + ".jpg")
-            except Exception as error:
-                erg.paste(img, (locationx, locationy), img)
-                if zweitebild:
-                    originalw, originalh = fg.size
-                    factor = originalw / targetwidthsecond
-                    fg = fg.resize(
-                        (targetwidth, int(originalh / factor)), resample=Image.BOX
-                    )
-                    erg.paste(fg, (locationzweitex, locationzweitey), fg)
-                originalw, originalh = erg.size
-                factor = originalh / finalheight
-                erg = erg.resize(
-                    (int(originalw / factor), finalheight),
-                    resample=Image.BOX,
-                )
-                erg.save(outputFolder + "/" + str(name) + ".png")
+                erg.paste(fg, (locationzweitex, locationzweitey), fg)
+            originalw, originalh = erg.size
+            factor = originalh / finalheight
+            erg = erg.resize(
+                (int(originalw / factor), finalheight),
+                resample=Image.BOX,
+            )  # fehler
+            erg.save(outputFolder + "/" + str(name) + ".png")
         except Exception as error:
-            logging.error("problem beim Layern des bilds mit dem namen: " + name)
-            print("problem beim layern des bilds mit dem namen: " + name)
-            print(+str(error))
+            erg.save(outputFolder + "/" + str(name) + ".jpg")
