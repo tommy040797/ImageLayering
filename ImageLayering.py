@@ -88,7 +88,6 @@ if customTexture:
                 )
                 print("problem beim resizen des bilds mit dem namen: " + name)
                 print(+str(error))
-        img.show()
         img = Util.replaceTexturePrep(img)
         img = Util.imageTransparentPattern(img)
         for file in glob.glob(textureFolder):
