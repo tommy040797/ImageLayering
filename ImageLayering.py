@@ -58,8 +58,6 @@ if customTexture:
         img = Image.open(file)
         name = img.filename
         img = img.convert("RGBA")
-        originalw, originalh = img.size
-        factor = originalw / targetwidth
 
         if trimmen:
             try:
@@ -77,8 +75,15 @@ if customTexture:
                     + ", evtl kein schwarz im bild vorhanden?"
                 )
                 print(+str(error))
+        originalw, originalh = img.size
+        factor = originalw / targetwidth
         if skalieren:
             try:
+                print(originalw)
+                print(targetwidth)
+                print(int(originalh / factor))
+                print(originalh)
+                print(factor)
                 img = img.resize(
                     (targetwidth, int(originalh / factor)), resample=Image.BOX
                 )  # diese zeile droppt den filename ??
@@ -88,6 +93,7 @@ if customTexture:
                 )
                 print("problem beim resizen des bilds mit dem namen: " + name)
                 print(+str(error))
+        img.show()
         img = Util.replaceTexturePrep(img)
         img = Util.imageTransparentPattern(img)
         for file in glob.glob(textureFolder):
@@ -215,7 +221,6 @@ for bg in backgroundlist:
         erg = bg.copy()
         try:
             erg.paste(img, (locationx, locationy), img)
-
             if zweitebild:
                 originalw, originalh = fg.size
                 factor = originalw / targetwidthsecond
