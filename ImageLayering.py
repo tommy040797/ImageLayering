@@ -79,11 +79,6 @@ if customTexture:
         factor = originalw / targetwidth
         if skalieren:
             try:
-                print(originalw)
-                print(targetwidth)
-                print(int(originalh / factor))
-                print(originalh)
-                print(factor)
                 img = img.resize(
                     (targetwidth, int(originalh / factor)), resample=Image.BOX
                 )  # diese zeile droppt den filename ??
